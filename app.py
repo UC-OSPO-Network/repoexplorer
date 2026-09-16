@@ -1658,58 +1658,7 @@ with ui.navset_pill(id="main_tab", selected="Repositories"):
                         )
                         @render.data_frame
                         def org_browse_table():
-                            data = filtered_org_df()
-                            if data.is_empty():
-                                return render.DataGrid(pl.DataFrame())
-
-                            search = (input.org_search() or "").strip().lower()
-                            if search:
-                                search_cols = ["login", "name", "description", "university", "location", "email", "url"]
-                                conditions = [
-                                    pl.col(c).cast(pl.Utf8).str.to_lowercase().str.contains(search, literal=True)
-                                    for c in search_cols if c in data.columns
-                                ]
-                                if conditions:
-                                    data = data.filter(pl.any_horizontal(conditions))
-
-                            col_map = {
-                                "login": "Login",
-                                "name": "Name",
-                                "university": "University",
-                                "description": "Description",
-                                "company": "Company",
-                                "email": "Email",
-                                "url": "URL",
-                                "location": "Location",
-                                "source": "Source",
-                                "created_at": "Created",
-                                "affiliation_prediction_orgs": "Affiliation score",
-                            }
-                            display_cols = [c for c in col_map if c in data.columns]
-                            rename_map = {c: col_map[c] for c in display_cols}
-                            out = data.select(display_cols).rename(rename_map)
-
-                            if "Created" in out.columns:
-                                out = out.with_columns(
-                                    pl.col("Created").str.slice(0, 7).alias("Created")
-                                )
-                            if "Affiliation score" in out.columns:
-                                out = out.with_columns(
-                                    pl.col("Affiliation score")
-                                    .cast(pl.Float64, strict=False)
-                                    .map_elements(lambda v: f"{v:.2f}" if v is not None else "—", return_dtype=pl.Utf8)
-                                    .alias("Affiliation score")
-                                )
-                            if "Login" in out.columns:
-                                login_idx = out.columns.index("Login")
-                                github_url = out["Login"].map_elements(
-                                    lambda v: f"https://github.com/{v}" if v and str(v).strip() else "—",
-                                    return_dtype=pl.Utf8,
-                                ).alias("GitHub URL")
-                                cols_before = out.columns[:login_idx + 1]
-                                cols_after = out.columns[login_idx + 1:]
-                                out = out.select(list(cols_before) + [github_url] + [pl.col(c) for c in cols_after])
-
+                            out = org_table_df()
                             return render.DataGrid(
                                 out,
                                 height="500px",
@@ -1736,6 +1685,61 @@ def _reset_org_filters():
 
 # ------------------------------------ Filtered DataFrame ----------------------------------------------
 
+@reactive.calc
+def org_table_df():
+    data = filtered_org_df()
+    if data.is_empty():
+        return data
+
+    search = (input.org_search() or "").strip().lower()
+    if search:
+        search_cols = ["login", "name", "description", "university", "location", "email", "url"]
+        conditions = [
+            pl.col(c).cast(pl.Utf8).str.to_lowercase().str.contains(search, literal=True)
+            for c in search_cols if c in data.columns
+        ]
+        if conditions:
+            data = data.filter(pl.any_horizontal(conditions))
+
+    col_map = {
+        "login": "Login",
+        "name": "Name",
+        "university": "University",
+        "description": "Description",
+        "company": "Company",
+        "email": "Email",
+        "url": "URL",
+        "location": "Location",
+        "source": "Source",
+        "created_at": "Created",
+        "affiliation_prediction_orgs": "Affiliation score",
+    }
+    display_cols = [c for c in col_map if c in data.columns]
+    rename_map = {c: col_map[c] for c in display_cols}
+    out = data.select(display_cols).rename(rename_map)
+
+    if "Created" in out.columns:
+        out = out.with_columns(
+            pl.col("Created").str.slice(0, 7).alias("Created")
+        )
+    if "Affiliation score" in out.columns:
+        out = out.with_columns(
+            pl.col("Affiliation score")
+            .cast(pl.Float64, strict=False)
+            .map_elements(lambda v: f"{v:.2f}" if v is not None else "—", return_dtype=pl.Utf8)
+            .alias("Affiliation score")
+        )
+    if "Login" in out.columns:
+        login_idx = out.columns.index("Login")
+        github_url = out["Login"].map_elements(
+            lambda v: f"https://github.com/{v}" if v and str(v).strip() else "—",
+            return_dtype=pl.Utf8,
+        ).alias("GitHub URL")
+        cols_before = out.columns[:login_idx + 1]
+        cols_after = out.columns[login_idx + 1:]
+        out = out.select(list(cols_before) + [github_url] + [pl.col(c) for c in cols_after])
+
+    return out
 @reactive.calc
 def filtered_org_df():
     data = df_organizations
