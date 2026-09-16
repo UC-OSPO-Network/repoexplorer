@@ -1686,7 +1686,8 @@ with ui.navset_pill(id="main_tab", selected="Repositories"):
                                 "affiliation_prediction_orgs": "Affiliation score",
                             }
                             display_cols = [c for c in col_map if c in data.columns]
-                            out = data.select(display_cols).rename(col_map)
+                            rename_map = {c: col_map[c] for c in display_cols}
+                            out = data.select(display_cols).rename(rename_map)
 
                             if "Created" in out.columns:
                                 out = out.with_columns(
