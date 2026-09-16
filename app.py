@@ -1489,8 +1489,8 @@ with ui.navset_pill(id="main_tab", selected="Repositories"):
                 ui.input_slider(
                     "slider_org_threshold",
                     "Prediction Threshold:",
-                    min=0.0, max=1.0,
-                    value=[0.5, 1.0],
+                    min=0.5, max=1.0,
+                    value=[0.8, 1.0],
                     step=0.01,
                 )
                 ui.input_selectize("org_university", "University:", _org_unis, multiple=True)
@@ -1681,7 +1681,7 @@ with ui.navset_pill(id="main_tab", selected="Repositories"):
 @reactive.event(input.reset_org_filters)
 def _reset_org_filters():
     ui.update_selectize("org_university", selected=[])
-    ui.update_slider("slider_org_threshold", value=[0.5, 1.0])
+    ui.update_slider("slider_org_threshold", value=[0.8, 1.0])
 
 # ------------------------------------ Filtered DataFrame ----------------------------------------------
 
